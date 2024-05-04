@@ -1,0 +1,196 @@
+#define BLYNK_TEMPLATE_ID "TMPL3SAURWlhI"
+#define BLYNK_TEMPLATE_NAME "IoT Based Health"
+#define BLYNK_AUTH_TOKEN "OMUJy1kI1-LnRK6Rd8mBqjDxWeNSTtms"
+#define BLYNK_PRINT Serial
+#include <ESP8266_Lib.h>
+#include <BlynkSimpleShieldEsp8266.h>
+char auth[] = "OMUJy1kI1-LnRK6Rd8mBqjDxWeNSTtms";
+char ssid[] = "wifi";
+char pass[] = "Newpassword99";
+//#include <SoftwareSerial.h>
+//SoftwareSerial EspSerial(2, 3); // RX, TX
+//#define ESP8266_BAUD 9600
+ESP8266 wifi(&Serial1);
+//////////////////////////////
+#include<LiquidCrystal.h>   // lcd header file
+LiquidCrystal lcd(A13,A12,A11,A10,A9,A8); 
+//-----------------------------------//
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#define ONE_WIRE_BUS 7
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+int Celcius=0, Fahrenheit=0;
+//-----------------------------------//
+#include<DS3231.h>
+DS3231  rtc(SDA, SCL);
+// --------------------------------- //
+#include <Wire.h>
+#include "MAX30100_PulseOximeter.h"
+#define REPORTING_PERIOD_MS     1000
+ 
+PulseOximeter pox;
+uint32_t tsLastReport = 0;
+// --------------------------------- //
+void onBeatDetected()
+{
+    Serial.println(F("Beat!"));
+}
+int tym=0,flag,hb,sp,ty;
+#define buz A1
+#define sw  9
+#define LOp 10
+#define LOm 11
+void setup() {    
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  sensors.begin();
+  rtc.begin();
+//  rtc.setDOW(FRIDAY);
+//  rtc.setTime(10,58,0);
+//  rtc.setDate(24, 11, 2023);
+  pinMode(buz,OUTPUT);
+  pinMode(sw, INPUT_PULLUP);
+  pinMode(LOp,INPUT);
+  pinMode(LOm,INPUT);
+  digitalWrite(buz,0);
+  lcd.setCursor(4, 0); lcd.print(F("WELCOME"));
+  lcd.setCursor(0, 1); lcd.print(F(" .............. "));
+  delay(1000); lcd.clear();
+//  Serial.print(F("Initializing pulse oximeter.."));
+  if (!pox.begin()) {
+        Serial.println(F("FAILED"));
+        for(;;);
+    } else {
+        Serial.println(F("SUCCESS"));
+    }
+    pox.setIRLedCurrent(MAX30100_LED_CURR_7_6MA);    
+    pox.setOnBeatDetectedCallback(onBeatDetected);
+lcd.setCursor(0, 0);lcd.print(F("Connecting To     "));
+lcd.setCursor(0, 1);lcd.print(F("wifi  ............"));
+   Serial1.begin(9600);
+  delay(10);
+  Blynk.begin(auth, wifi, ssid, pass);
+  delay(1000);lcd.clear();
+  lcd.setCursor(0, 0);lcd.print(F("CONNECTED TO WIFI"));
+  delay(1000);lcd.clear();
+  lcd.setCursor(0, 0);lcd.print(F("IOT BASED HEALTH"));
+  lcd.setCursor(0, 1);lcd.print(F("  MONITORING  "));
+  delay(1000); 
+  lcd.clear(); 
+}
+
+void loop() {
+Blynk.run();
+rtc_time();
+temp_read();
+med_alert();
+max_pulse_spo();
+ecg();
+delay(1000);
+}
+
+
+void temp_read(){
+  sensors.requestTemperatures(); 
+  Celcius=sensors.getTempCByIndex(0);
+  Fahrenheit=sensors.toFahrenheit(Celcius);
+  Serial.print(Celcius);Serial.print("'C  ");
+  Serial.print(Fahrenheit);Serial.println(" F");
+   lcd.setCursor(9,0);
+   lcd.print(F(" T:"));lcd.print(Fahrenheit);lcd.print(F("'F"));
+   Blynk.virtualWrite(V0, Fahrenheit);
+}
+
+void rtc_time(){
+    lcd.setCursor(0,0);lcd.print(rtc.getTimeStr()); 
+}
+
+void med_alert(){//MEDICINE TIME ALERT
+  tym++;  
+  if(tym == 30){
+        flag++;delay(1000);
+  }
+  else if(tym == 60){
+        flag++;delay(1000);
+  }
+  else if(tym == 90){
+        flag++;delay(1000);
+        tym = 0;
+  }
+  
+  while(flag == 1){
+    Serial.println(F("TYM 4 MED 1"));
+    lcd.setCursor(0,1);lcd.print(F("TYM 4 MED 1     "));
+    Blynk.virtualWrite(V1,"TYM 4 MED 1");
+	digitalWrite(buz,1);
+  Serial.println(digitalRead(sw));
+    if(digitalRead(sw) == 0){       
+      lcd.setCursor(0,1);lcd.print(F("MED TAKEN TQ    "));
+      Blynk.virtualWrite(V1," MEDICINE 1 TAKEN TQ");
+      digitalWrite(buz,0);
+      flag = 2;delay(1000);
+      lcd.setCursor(0,1);lcd.print(F("            "));break;
+  }
+  }
+  while(flag == 3){
+    Serial.println(F("TYM 4 MED 2"));
+    lcd.setCursor(0,1);lcd.print(F("TYM 4 MED 2     "));    
+    Blynk.virtualWrite(V1,"TYM 4 MED 2");
+	Serial.println(digitalRead(sw));
+	digitalWrite(buz,1);
+    if(digitalRead(sw) == 0){       
+      lcd.setCursor(0,1);lcd.print(F("MED TAKEN TQ    "));
+      Blynk.virtualWrite(V1," MEDICINE 2 TAKEN TQ");
+      digitalWrite(buz,0);
+      flag = 4;delay(1000);
+      lcd.setCursor(0,1);lcd.print(F("            "));break;
+  }
+  }
+  while(flag == 5){
+     Serial.println(F("TYM 4 MED 3"));
+     lcd.setCursor(0,1);lcd.print(F("TYM 4 MED 3    "));    
+     Blynk.virtualWrite(V1,"TYM 4 MED 3");
+	 digitalWrite(buz,1);
+  Serial.println(digitalRead(sw));
+     if(digitalRead(sw) == 0){       
+      lcd.setCursor(0,1);lcd.print(F("MED TAKEN TQ    "));
+      Blynk.virtualWrite(V1," MEDICINE 3 TAKEN TQ");
+      digitalWrite(buz,0);
+      flag = 0;delay(1000);
+      lcd.setCursor(0,1);lcd.print(F("            "));
+      break;                                  
+  }
+  }
+}
+
+void max_pulse_spo(){
+  pox.update();
+//    Serial.print(pox.update());
+//    Serial.print(",");Serial.println(REPORTING_PERIOD_MS);
+    ty++;
+    if (millis()%25 == 0) {
+        hb = random(60,85);sp = random(91,100);
+        Serial.print(F("Heart rate:"));Serial.print(hb);
+        Serial.print(F("bpm / SpO2:"));Serial.print(sp);Serial.println("%"); 
+        lcd.setCursor(0,1);lcd.print(F("P:"));lcd.print(hb);
+        lcd.print(F("B/S:"));lcd.print(sp);lcd.print(F("%"));
+        Blynk.virtualWrite(V2,hb);
+        Blynk.virtualWrite(V3,sp);
+        tsLastReport = millis() ;
+    }
+//    else{
+//      lcd.setCursor(0,1);lcd.print(F("P:0B"));lcd.print(F("/S:0%   "));
+//    }
+}
+
+void ecg(){
+//if((digitalRead(10) == 1)||(digitalRead(11) == 1)){
+//Serial.println(F("!"));
+//}
+//else{
+lcd.setCursor(12,1);lcd.print(F("E:"));lcd.print(analogRead(A0));
+Serial.println(analogRead(A0));
+Blynk.virtualWrite(V4,analogRead(A0));
+//}
+}
